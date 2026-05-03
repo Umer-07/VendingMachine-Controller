@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vending Machine FSM Controller</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── Reset & tokens ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0d0f14;
+      --surface:  #14171f;
+      --surface2: #1c2030;
+      --border:   #252a38;
+      --border2:  #2e3448;
+      --text:     #e2e8f0;
+      --muted:    #7a8499;
+      --dim:      #3d4560;
+
+      --green:    #10b981;
+      --green-d:  #059669;
+      --green-bg: rgba(16,185,129,.12);
+      --green-bd: rgba(16,185,129,.3);
+
+      --amber:    #f59e0b;
+      --amber-d:  #d97706;
+      --amber-bg: rgba(245,158,11,.12);
+      --amber-bd: rgba(245,158,11,.3);
+
+      --blue:     #3b82f6;
+      --blue-bg:  rgba(59,130,246,.12);
+      --blue-bd:  rgba(59,130,246,.3);
+
+      --red:      #ef4444;
+      --red-bg:   rgba(239,68,68,.12);
+      --red-bd:   rgba(239,68,68,.3);
+
+      --mono: 'JetBrains Mono', monospace;
+      --display: 'Syne', sans-serif;
+      --radius: 10px;
+      --radius-lg: 16px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--mono);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* ── Layout ── */
+    .site-header {
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+      position: sticky;
+      top: 0;
+      background: rgba(13,15,20,.9);
+      backdrop-filter: blur(12px);
+      z-index: 100;
+    }
+
+    .logo {
+      font-family: var(--display);
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: -.02em;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .logo .badge {
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 500;
+      background: var(--green-bg);
+      border: 1px solid var(--green-bd);
+      color: var(--green);
+      padding: 2px 8px;
+      border-radius: 20px;
+      letter-spacing: .04em;
+    }
+
+    nav { display: flex; gap: 1.5rem; }
+    nav a { color: var(--muted); text-decoration: none; font-size: 13px; transition: color .15s; }
+    nav a:hover { color: var(--text); }
+
+    main { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+
+    /* ── Hero ── */
+    .hero {
+      text-align: center;
+      padding: 3rem 0 2.5rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 2.5rem;
+    }
+
+    .hero h1 {
+      font-family: var(--display);
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 800;
+      letter-spacing: -.04em;
+      line-height: 1.15;
+      margin-bottom: 1rem;
+    }
+
+    .hero h1 span { color: var(--green); }
+
+    .hero p {
+      color: var(--muted);
+      font-size: 14px;
+      max-width: 560px;
+      margin: 0 auto 1.5rem;
+      line-height: 1.8;
+    }
+
+    .chip-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+    .chip {
+      font-size: 11px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border2);
+      color: var(--muted);
+      background: var(--surface);
+    }
+
+    /* ── Grid ── */
+    .sim-grid {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    @media (max-width: 860px) {
+      .sim-grid { grid-template-columns: 1fr; }
+      nav { display: none; }
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .card-head {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--surface2);
+    }
+
+    .card-head h3 {
+      font-family: var(--display);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .card-head .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    .card-body { padding: 1.25rem; }
+
+    /* ── Price configurator ── */
+    .price-config { display: flex; gap: 10px; align-items: flex-end; margin-bottom: 1.25rem; }
+    .field { display: flex; flex-direction: column; gap: 5px; flex: 1; }
+    .field label { font-size: 11px; color: var(--muted); letter-spacing: .05em; }
+    .field input {
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      color: var(--text);
+      border-radius: var(--radius);
+      padding: 8px 12px;
+      font-family: var(--mono);
+      font-size: 14px;
+      font-weight: 500;
+      width: 100%;
+      transition: border-color .15s;
+    }
+    .field input:focus { outline: none; border-color: var(--blue); }
+
+    .set-btn {
+      background: var(--green-bg);
+      border: 1px solid var(--green-bd);
+      color: var(--green);
+      border-radius: var(--radius);
+      padding: 8px 14px;
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all .15s;
+    }
+    .set-btn:hover { background: var(--green-d); color: #fff; }
+
+    /* ── FSM state diagram ── */
+    #fsm-svg { width: 100%; display: block; }
+
+    /* ── Right panel ── */
+    .right-col { display: flex; flex-direction: column; gap: 1.25rem; }
+
+    /* ── Progress ── */
+    .progress-wrap { margin-bottom: 1rem; }
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 8px;
+    }
+    .progress-header .label { font-size: 11px; color: var(--muted); }
+    .progress-header .amount {
+      font-family: var(--display);
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -.03em;
+    }
+
+    .progress-track {
+      height: 8px;
+      background: var(--surface2);
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      margin-bottom: 6px;
+    }
+    .progress-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width .4s cubic-bezier(.34,1.4,.64,1), background .3s;
+      background: var(--green);
+    }
+    .progress-fill.over { background: var(--amber); }
+
+    .progress-ticks {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--dim);
+    }
+
+    /* ── State badge ── */
+    .state-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+    .state-badge {
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border2);
+      color: var(--muted);
+      background: var(--surface2);
+      font-family: var(--mono);
+    }
+    .state-badge.active {
+      border-color: var(--green-bd);
+      background: var(--green-bg);
+      color: var(--green);
+    }
+    .encoding-badge {
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 6px;
+      background: var(--blue-bg);
+      border: 1px solid var(--blue-bd);
+      color: var(--blue);
+      font-family: var(--mono);
+    }
+
+    /* ── Coins ── */
+    .coins { display: flex; gap: 10px; margin-bottom: 1rem; }
+    .coin-btn {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      padding: 14px 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius);
+      cursor: pointer;
+      color: var(--text);
+      font-family: var(--mono);
+      transition: all .12s;
+      user-select: none;
+    }
+    .coin-btn:hover {
+      border-color: var(--green-bd);
+      background: var(--green-bg);
+      transform: translateY(-2px);
+    }
+    .coin-btn:active { transform: translateY(0) scale(.97); }
+    .coin-btn.clicked {
+      border-color: var(--green);
+      background: var(--green-bg);
+      box-shadow: 0 0 12px rgba(16,185,129,.25);
+    }
+    .coin-val { font-size: 18px; font-weight: 700; font-family: var(--display); }
+    .coin-name { font-size: 10px; color: var(--muted); }
+    .coin-enc { font-size: 9px; color: var(--dim); }
+
+    /* ── Output signals ── */
+    .signals { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1rem; }
+    .signal {
+      padding: 12px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      transition: all .25s;
+    }
+    .signal.on-green {
+      border-color: var(--green-bd);
+      background: var(--green-bg);
+      box-shadow: 0 0 16px rgba(16,185,129,.1);
+    }
+    .signal.on-amber {
+      border-color: var(--amber-bd);
+      background: var(--amber-bg);
+    }
+    .signal.on-blue {
+      border-color: var(--blue-bd);
+      background: var(--blue-bg);
+    }
+    .sig-name { font-size: 10px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; margin-bottom: 4px; }
+    .sig-val { font-size: 20px; font-weight: 700; font-family: var(--display); color: var(--dim); transition: color .25s; }
+    .signal.on-green .sig-val { color: var(--green); }
+    .signal.on-amber .sig-val { color: var(--amber); }
+    .signal.on-blue  .sig-val { color: var(--blue); }
+
+    /* ── Actions ── */
+    .actions { display: flex; gap: 8px; }
+    .action-btn {
+      flex: 1;
+      padding: 9px 14px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border2);
+      background: transparent;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .action-btn:hover { border-color: var(--blue-bd); color: var(--blue); background: var(--blue-bg); }
+    .action-btn.danger:hover { border-color: var(--red-bd); color: var(--red); background: var(--red-bg); }
+
+    /* ── Log ── */
+    #log {
+      font-size: 11.5px;
+      line-height: 1.8;
+      max-height: 200px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border2) transparent;
+    }
+
+    .log-line { color: var(--muted); border-bottom: 1px solid var(--border); padding: 3px 0; }
+    .log-line:last-child { border: none; }
+    .log-line .ts { color: var(--dim); margin-right: 8px; }
+    .log-line.ok  { color: var(--green); }
+    .log-line.chg { color: var(--amber); }
+    .log-line.rst { color: var(--red); }
+    .log-line.ref { color: var(--blue); }
+
+    /* ── SystemVerilog code view ── */
+    section { margin-bottom: 2.5rem; }
+    section h2 {
+      font-family: var(--display);
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      letter-spacing: -.02em;
+    }
+    section h2::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .code-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .code-head {
+      padding: 10px 16px;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .code-head .fname {
+      font-size: 12px;
+      color: var(--green);
+      font-family: var(--mono);
+    }
+    .copy-btn {
+      font-size: 11px;
+      padding: 3px 10px;
+      background: transparent;
+      border: 1px solid var(--border2);
+      color: var(--muted);
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: var(--mono);
+      transition: all .15s;
+    }
+    .copy-btn:hover { border-color: var(--green-bd); color: var(--green); }
+
+    pre {
+      padding: 1.25rem;
+      overflow-x: auto;
+      font-size: 12.5px;
+      line-height: 1.75;
+      color: var(--text);
+      font-family: var(--mono);
+      tab-size: 4;
+    }
+
+    /* Syntax highlight tokens */
+    .kw   { color: #c792ea; }
+    .kw2  { color: #82aaff; }
+    .type { color: #ffcb6b; }
+    .cmt  { color: #546e7a; font-style: italic; }
+    .str  { color: #c3e88d; }
+    .num  { color: #f78c6c; }
+    .pp   { color: #89ddff; }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      text-align: center;
+      padding: 2rem;
+      color: var(--dim);
+      font-size: 12px;
+    }
+    footer a { color: var(--muted); text-decoration: none; }
+    footer a:hover { color: var(--green); }
+
+    /* ── Notification toast ── */
+    #toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius);
+      padding: 10px 16px;
+      font-size: 13px;
+      color: var(--text);
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all .25s;
+      pointer-events: none;
+      z-index: 200;
+    }
+    #toast.show { opacity: 1; transform: translateY(0); }
+  </style>
+</head>
+
+<body>
+
+<!-- ── Header ── -->
+<header class="site-header">
+  <div class="logo">
+    Vending FSM
+    <span class="badge">SystemVerilog</span>
+  </div>
+  <nav>
+    <a href="#simulator">Simulator</a>
+    <a href="#rtl">RTL</a>
+    <a href="#testbench">Testbench</a>
+  </nav>
+</header>
+
+<!-- ── Toast ── -->
+<div id="toast">Copied to clipboard</div>
+
+<main>
+
+  <!-- ── Hero ── -->
+  <div class="hero">
+    <h1>Vending Machine<br /><span>FSM Controller</span></h1>
+    <p>
+      Interactive simulator and full SystemVerilog RTL for a parameterized-price
+      vending machine controller. Set any product price, insert coins, and watch
+      the FSM states update in real time.
+    </p>
+    <div class="chip-row">
+      <span class="chip">FSM Design</span>
+      <span class="chip">Sequential Logic</span>
+      <span class="chip">Parameterized RTL</span>
+      <span class="chip">Change Return</span>
+      <span class="chip">Testbench Verification</span>
+    </div>
+  </div>
+
+  <!-- ── Simulator ── -->
+  <section id="simulator">
+    <h2>Simulator</h2>
+
+    <div class="sim-grid">
+      <!-- Left: FSM diagram -->
+      <div class="card">
+        <div class="card-head">
+          <h3>FSM State Diagram</h3>
+          <div class="dot"></div>
+        </div>
+        <div class="card-body" style="padding:10px 6px">
+          <svg id="fsm-svg" viewBox="0 0 240 420">
+            <defs>
+              <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+                <path d="M2 1L8 5L2 9" fill="none" stroke="#3d4560" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </marker>
+              <marker id="arr-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+                <path d="M2 1L8 5L2 9" fill="none" stroke="#10b981" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </marker>
+            </defs>
+
+            <!-- vertical backbone arrows -->
+            <line x1="120" y1="46" x2="120" y2="78" stroke="#3d4560" stroke-width="1" marker-end="url(#arr)"/>
+            <line x1="120" y1="114" x2="120" y2="146" stroke="#3d4560" stroke-width="1" marker-end="url(#arr)"/>
+            <line x1="120" y1="182" x2="120" y2="214" stroke="#3d4560" stroke-width="1" marker-end="url(#arr)"/>
+            <line x1="120" y1="250" x2="120" y2="282" stroke="#3d4560" stroke-width="1" marker-end="url(#arr)"/>
+            <line x1="120" y1="318" x2="120" y2="350" stroke="#3d4560" stroke-width="1" marker-end="url(#arr)"/>
+
+            <!-- right-side dime shortcuts -->
+            <path d="M148 30 Q185 30 185 130 Q185 162 162 162" stroke="#3d4560" stroke-width="1" fill="none" marker-end="url(#arr)"/>
+            <path d="M148 98 Q192 98 192 230 Q192 262 162 262" stroke="#3d4560" stroke-width="1" fill="none" marker-end="url(#arr)"/>
+            <path d="M148 166 Q198 166 198 295 Q198 326 162 326" stroke="#3d4560" stroke-width="1" fill="none" marker-end="url(#arr)"/>
+
+            <!-- quarter left-side shortcuts (dashed green = reach-price) -->
+            <path d="M92 30 Q48 30 48 362 Q48 382 88 390" stroke="#10b981" stroke-width="1" fill="none" stroke-dasharray="3 3" marker-end="url(#arr-green)"/>
+            <path d="M92 98 Q54 98 54 362 Q54 382 88 390" stroke="#10b981" stroke-width="1" fill="none" stroke-dasharray="3 3" marker-end="url(#arr-green)"/>
+
+            <!-- States -->
+            <!-- S0 -->
+            <g id="sv-S0">
+              <rect x="80" y="10" width="80" height="36" rx="8" fill="#1c2030" stroke="#2e3448" stroke-width="1"/>
+              <text x="120" y="24" text-anchor="middle" fill="#7a8499" font-size="10" font-family="'JetBrains Mono'" dominant-baseline="central">S0</text>
+              <text x="120" y="38" text-anchor="middle" fill="#3d4560" font-size="9" font-family="'JetBrains Mono'" dominant-baseline="central">0¢</text>
+            </g>
+            <!-- S5 -->
+            <g id="sv-S5">
+              <rect x="80" y="78" width="80" height="36" rx="8" fill="#1c2030" stroke="#2e3448" stroke-width="1"/>
+              <text x="120" y="92" text-anchor="middle" fill="#7a8499" font-size="10" font-family="'JetBrains Mono'" dominant-baseline="central">S5</text>
+              <text x="120" y="106" text-anchor="middle" fill="#3d4560" font-size="9" font-family="'JetBrains Mono'" dominant-baseline="central">5¢</text>
+            </g>
+            <!-- S10 -->
+            <g id="sv-S10">
+              <rect x="80" y="146" width="80" height="36" rx="8" fill="#1c2030" stroke="#2e3448" stroke-width="1"/>
+              <text x="120" y="160" text-anchor="middle" fill="#7a8499" font-size="10" font-family="'JetBrains Mono'" dominant-baseline="central">S10</text>
+              <text x="120" y="174" text-anchor="middle" fill="#3d4560" font-size="9" font-family="'JetBrains Mono'" dominant-baseline="central">10¢</text>
+            </g>
+            <!-- S15 -->
+            <g id="sv-S15">
+              <rect x="80" y="214" width="80" height="36" rx="8" fill="#1c2030" stroke="#2e3448" stroke-width="1"/>
+              <text x="120" y="228" text-anchor="middle" fill="#7a8499" font-size="10" font-family="'JetBrains Mono'" dominant-baseline="central">S15</text>
+              <text x="120" y="242" text-anchor="middle" fill="#3d4560" font-size="9" font-family="'JetBrains Mono'" dominant-baseline="central">15¢</text>
+            </g>
+            <!-- S20 -->
+            <g id="sv-S20">
+              <rect x="80" y="282" width="80" height="36" rx="8" fill="#1c2030" stroke="#2e3448" stroke-width="1"/>
+              <text x="120" y="296" text-anchor="middle" fill="#7a8499" font-size="10" font-family="'JetBrains Mono'" dominant-baseline="central">S20</text>
+              <text x="120" y="310" text-anchor="middle" fill="#3d4560" font-size="9" font-family="'JetBrains Mono'" dominant-baseline="central">20¢</text>
+            </g>
+            <!-- S25 -->
+            <g id="sv-S25">
+              <rect x="80" y="350" width="80" height="36" rx="8" fill="#1c2030" stroke="#2e3448" stroke-width="1"/>
+              <text x="120" y="364" text-anchor="middle" fill="#7a8499" font-size="10" font-family="'JetBrains Mono'" dominant-baseline="central">S25</text>
+              <text x="120" y="378" text-anchor="middle" fill="#3d4560" font-size="9" font-family="'JetBrains Mono'" dominant-baseline="central">25¢</text>
+            </g>
+
+            <!-- Tick labels -->
+            <text x="125" y="63" font-size="8" fill="#546e7a" font-family="'JetBrains Mono'">N</text>
+            <text x="125" y="131" font-size="8" fill="#546e7a" font-family="'JetBrains Mono'">N</text>
+            <text x="125" y="199" font-size="8" fill="#546e7a" font-family="'JetBrains Mono'">N</text>
+            <text x="125" y="267" font-size="8" fill="#546e7a" font-family="'JetBrains Mono'">N</text>
+            <text x="125" y="335" font-size="8" fill="#546e7a" font-family="'JetBrains Mono'">N</text>
+            <text x="187" y="80" font-size="8" fill="#546e7a" font-family="'JetBrains Mono'">D</text>
+            <text x="194" y="150" font-size="8" fill="#546e7a" font-family="'JetBrains Mono'">D</text>
+            <text x="200" y="218" font-size="8" fill="#546e7a" font-family="'JetBrains Mono'">D</text>
+            <text x="36" y="200" font-size="8" fill="#10b981" font-family="'JetBrains Mono'">Q→✓</text>
+
+            <!-- Legend -->
+            <text x="6" y="412" font-size="8" fill="#546e7a" font-family="'JetBrains Mono'">N=5¢  D=10¢  Q=25¢  →✓=dispense</text>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Right: controller -->
+      <div class="right-col">
+
+        <!-- Machine card -->
+        <div class="card">
+          <div class="card-head">
+            <h3>Machine Controller</h3>
+            <div class="dot"></div>
+          </div>
+          <div class="card-body">
+
+            <!-- Price config -->
+            <div class="price-config">
+              <div class="field">
+                <label>PRICE parameter (¢)</label>
+                <input type="number" id="price-input" value="30" min="5" max="95" step="5" />
+              </div>
+              <button class="set-btn" onclick="setPrice()">Set Price</button>
+            </div>
+
+            <!-- Progress -->
+            <div class="progress-wrap">
+              <div class="progress-header">
+                <span class="label">inserted / price</span>
+                <span class="amount" id="amount-display">0¢ / 30¢</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill" id="prog-fill" style="width:0%"></div>
+              </div>
+              <div class="progress-ticks">
+                <span>0¢</span>
+                <span id="price-mid">—</span>
+                <span id="price-label">30¢</span>
+              </div>
+            </div>
+
+            <!-- State row -->
+            <div class="state-row">
+              <div class="state-badge active" id="state-badge">S0</div>
+              <div class="encoding-badge" id="enc-badge">coin = 2'b00</div>
+            </div>
+
+            <!-- Coins -->
+            <div class="coins">
+              <button class="coin-btn" onclick="insertCoin(5,'01')" id="cb5">
+                <span class="coin-val">5¢</span>
+                <span class="coin-name">nickel</span>
+                <span class="coin-enc">2'b01</span>
+              </button>
+              <button class="coin-btn" onclick="insertCoin(10,'10')" id="cb10">
+                <span class="coin-val">10¢</span>
+                <span class="coin-name">dime</span>
+                <span class="coin-enc">2'b10</span>
+              </button>
+              <button class="coin-btn" onclick="insertCoin(25,'11')" id="cb25">
+                <span class="coin-val">25¢</span>
+                <span class="coin-name">quarter</span>
+                <span class="coin-enc">2'b11</span>
+              </button>
+            </div>
+
+            <!-- Signals -->
+            <div class="signals">
+              <div class="signal" id="sig-dispense">
+                <div class="sig-name">dispense</div>
+                <div class="sig-val" id="disp-val">0</div>
+              </div>
+              <div class="signal" id="sig-change">
+                <div class="sig-name">change</div>
+                <div class="sig-val" id="chng-val">0¢</div>
+              </div>
+              <div class="signal" id="sig-refund">
+                <div class="sig-name">refund_out</div>
+                <div class="sig-val" id="ref-val">0</div>
+              </div>
+              <div class="signal" id="sig-amount">
+                <div class="sig-name">amount[5:0]</div>
+                <div class="sig-val" id="amt-val">000000</div>
+              </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="actions">
+              <button class="action-btn" onclick="refund()">↩ Refund</button>
+              <button class="action-btn danger" onclick="doReset()">⟳ Reset</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Log card -->
+        <div class="card">
+          <div class="card-head">
+            <h3>Transaction Log</h3>
+            <button onclick="clearLog()" style="background:none;border:none;color:#3d4560;font-size:11px;cursor:pointer;font-family:var(--mono)">clear</button>
+          </div>
+          <div class="card-body" style="padding:10px 14px">
+            <div id="log"></div>
+          </div>
+        </div>
+
+      </div><!-- end right-col -->
+    </div><!-- end sim-grid -->
+  </section>
+
+  <!-- ── RTL Code ── -->
+  <section id="rtl">
+    <h2>RTL — vending_machine.sv</h2>
+    <div class="code-block">
+      <div class="code-head">
+        <span class="fname">rtl/vending_machine.sv</span>
+        <button class="copy-btn" onclick="copyCode('rtl-code')">Copy</button>
+      </div>
+      <pre id="rtl-code"><span class="cmt">// Parameterized Vending Machine Controller</span>
+<span class="kw">module</span> <span class="kw2">vending_machine</span> <span class="pp">#(</span>
+    <span class="kw">parameter int</span> PRICE      = <span class="num">30</span>,
+    <span class="kw">parameter int</span> MAX_CHANGE = <span class="num">45</span>
+<span class="pp">)</span> (
+    <span class="kw">input</span>  <span class="type">logic</span>        clk,
+    <span class="kw">input</span>  <span class="type">logic</span>        reset,
+    <span class="kw">input</span>  <span class="type">logic</span> [<span class="num">1</span>:<span class="num">0</span>]  coin,
+    <span class="kw">input</span>  <span class="type">logic</span>        refund,
+    <span class="kw">output</span> <span class="type">logic</span>        dispense,
+    <span class="kw">output</span> <span class="type">logic</span> [<span class="num">5</span>:<span class="num">0</span>]  change,
+    <span class="kw">output</span> <span class="type">logic</span>        refund_out,
+    <span class="kw">output</span> <span class="type">logic</span> [<span class="num">5</span>:<span class="num">0</span>]  amount
+);
+    <span class="kw">localparam int</span> STATE_BITS = <span class="num">6</span>;
+
+    <span class="type">logic</span> [STATE_BITS-<span class="num">1</span>:<span class="num">0</span>] state, next_state;
+    <span class="type">logic</span> [<span class="num">4</span>:<span class="num">0</span>] coin_val;
+    <span class="type">logic</span> [STATE_BITS-<span class="num">1</span>:<span class="num">0</span>] tentative;
+
+    <span class="cmt">// Coin decoder</span>
+    <span class="kw">always_comb begin</span>
+        <span class="kw">unique case</span> (coin)
+            <span class="num">2'b00</span>: coin_val = <span class="num">5'd0</span>;
+            <span class="num">2'b01</span>: coin_val = <span class="num">5'd5</span>;
+            <span class="num">2'b10</span>: coin_val = <span class="num">5'd10</span>;
+            <span class="num">2'b11</span>: coin_val = <span class="num">5'd25</span>;
+        <span class="kw">endcase</span>
+    <span class="kw">end</span>
+
+    <span class="cmt">// Next-state + output logic</span>
+    <span class="kw">always_comb begin</span>
+        next_state  = state;
+        dispense    = <span class="num">1'b0</span>;
+        change      = <span class="num">6'd0</span>;
+        refund_out  = <span class="num">1'b0</span>;
+        tentative   = state + {<span class="num">1'b0</span>, coin_val};
+
+        <span class="kw">if</span> (refund) <span class="kw">begin</span>
+            refund_out = <span class="num">1'b1</span>;
+            change     = state;
+            next_state = <span class="str">'0</span>;
+        <span class="kw">end else if</span> (coin != <span class="num">2'b00</span>) <span class="kw">begin</span>
+            <span class="kw">if</span> (tentative >= STATE_BITS<span class="str">'(PRICE)</span>) <span class="kw">begin</span>
+                dispense   = <span class="num">1'b1</span>;
+                change     = <span class="num">6'</span>(tentative - STATE_BITS<span class="str">'(PRICE)</span>);
+                next_state = <span class="str">'0</span>;
+            <span class="kw">end else begin</span>
+                next_state = tentative;
+            <span class="kw">end</span>
+        <span class="kw">end</span>
+    <span class="kw">end</span>
+
+    <span class="cmt">// Sequential state register</span>
+    <span class="kw">always_ff</span> @(<span class="kw">posedge</span> clk) <span class="kw">begin</span>
+        <span class="kw">if</span> (reset) state <= <span class="str">'0</span>;
+        <span class="kw">else</span>       state <= next_state;
+    <span class="kw">end</span>
+
+    <span class="kw">assign</span> amount = state;
+
+<span class="kw">endmodule</span></pre>
+    </div>
+  </section>
+
+  <!-- ── Testbench ── -->
+  <section id="testbench">
+    <h2>Testbench — vending_machine_tb.sv</h2>
+    <div class="code-block">
+      <div class="code-head">
+        <span class="fname">tb/vending_machine_tb.sv</span>
+        <button class="copy-btn" onclick="copyCode('tb-code')">Copy</button>
+      </div>
+      <pre id="tb-code"><span class="cmt">// Self-checking testbench — 12 test cases</span>
+<span class="pp">`timescale 1ns/1ps</span>
+
+<span class="kw">module</span> <span class="kw2">vending_machine_tb</span>;
+    <span class="kw">localparam int</span> CLK_PERIOD = <span class="num">10</span>;
+
+    <span class="type">logic</span>        clk, reset, refund;
+    <span class="type">logic</span> [<span class="num">1</span>:<span class="num">0</span>]  coin;
+    <span class="type">logic</span>        dispense, refund_out;
+    <span class="type">logic</span> [<span class="num">5</span>:<span class="num">0</span>]  change, amount;
+
+    <span class="kw2">vending_machine</span> <span class="pp">#(.PRICE(30))</span> dut (.*);
+
+    <span class="kw">initial</span> clk = <span class="num">0</span>;
+    <span class="kw">always</span> #(CLK_PERIOD/<span class="num">2</span>) clk = ~clk;
+
+    <span class="kw">task automatic</span> insert_coin(<span class="kw">input logic</span> [<span class="num">1</span>:<span class="num">0</span>] c);
+        @(<span class="kw">negedge</span> clk); coin = c;
+        @(<span class="kw">posedge</span> clk); #<span class="num">1</span>;
+        @(<span class="kw">negedge</span> clk); coin = <span class="num">2'b00</span>;
+    <span class="kw">endtask</span>
+
+    <span class="kw">task automatic</span> check(<span class="kw">input string</span> name,
+        <span class="kw">input logic</span> exp_d, <span class="kw">input logic</span> [<span class="num">5</span>:<span class="num">0</span>] exp_c,
+        <span class="kw">input logic</span> exp_r);
+        <span class="kw">if</span> (dispense!==exp_d || change!==exp_c || refund_out!==exp_r)
+            $display(<span class="str">"FAIL [%s]"</span>, name);
+        <span class="kw">else</span>
+            $display(<span class="str">"PASS [%s] dispense=%0b change=%0d¢"</span>,
+                     name, dispense, change);
+    <span class="kw">endtask</span>
+
+    <span class="kw">initial begin</span>
+        $dumpfile(<span class="str">"vending_machine.vcd"</span>);
+        $dumpvars(<span class="num">0</span>, vending_machine_tb);
+        reset=<span class="num">1</span>; coin=<span class="num">2'b00</span>; refund=<span class="num">0</span>;
+        repeat(<span class="num">3</span>) @(<span class="kw">posedge</span> clk); reset=<span class="num">0</span>;
+
+        <span class="cmt">// T1: 10+10+10 = dispense no change</span>
+        insert_coin(<span class="num">2'b10</span>); check(<span class="str">"T1a"</span>,<span class="num">0</span>,<span class="num">0</span>,<span class="num">0</span>);
+        insert_coin(<span class="num">2'b10</span>); check(<span class="str">"T1b"</span>,<span class="num">0</span>,<span class="num">0</span>,<span class="num">0</span>);
+        insert_coin(<span class="num">2'b10</span>); check(<span class="str">"T1c"</span>,<span class="num">1</span>,<span class="num">0</span>,<span class="num">0</span>);
+
+        <span class="cmt">// T2: 25+5 = dispense no change</span>
+        reset=<span class="num">1</span>; @(<span class="kw">posedge</span> clk); reset=<span class="num">0</span>;
+        insert_coin(<span class="num">2'b11</span>); check(<span class="str">"T2a"</span>,<span class="num">0</span>,<span class="num">0</span>,<span class="num">0</span>);
+        insert_coin(<span class="num">2'b01</span>); check(<span class="str">"T2b"</span>,<span class="num">1</span>,<span class="num">0</span>,<span class="num">0</span>);
+
+        <span class="cmt">// T3: 25+10 = dispense 5¢ change</span>
+        reset=<span class="num">1</span>; @(<span class="kw">posedge</span> clk); reset=<span class="num">0</span>;
+        insert_coin(<span class="num">2'b11</span>); insert_coin(<span class="num">2'b10</span>);
+        check(<span class="str">"T3"</span>,<span class="num">1</span>,<span class="num">6'd5</span>,<span class="num">0</span>);
+
+        <span class="cmt">// T4: 25+25 = dispense 20¢ change</span>
+        reset=<span class="num">1</span>; @(<span class="kw">posedge</span> clk); reset=<span class="num">0</span>;
+        insert_coin(<span class="num">2'b11</span>); insert_coin(<span class="num">2'b11</span>);
+        check(<span class="str">"T4"</span>,<span class="num">1</span>,<span class="num">6'd20</span>,<span class="num">0</span>);
+
+        $display(<span class="str">"--- Simulation complete ---"</span>);
+        $finish;
+    <span class="kw">end</span>
+<span class="kw">endmodule</span></pre>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <p>Vending Machine FSM Controller &mdash; SystemVerilog ASIC Portfolio Project &mdash;
+  <a href="https://github.com" target="_blank">View on GitHub</a></p>
+</footer>
+
+<script>
+  // ── Simulator state ──
+  let PRICE = 30;
+  let total = 0;
+  let tick = 0;
+  let busy = false;
+
+  const validStates = [0, 5, 10, 15, 20, 25];
+
+  function snapState(t) {
+    const k = Math.min(t, 25);
+    return validStates.reduce((p, c) => Math.abs(c - k) < Math.abs(p - k) ? c : p, 0);
+  }
+
+  function toBinary(n, bits) {
+    return n.toString(2).padStart(bits, '0');
+  }
+
+  function highlightFsmNode(t) {
+    document.querySelectorAll('[id^="sv-"] rect').forEach(r => {
+      r.setAttribute('fill', '#1c2030');
+      r.setAttribute('stroke', '#2e3448');
+      r.setAttribute('stroke-width', '1');
+    });
+    const key = busy ? 0 : snapState(t);
+    const node = document.getElementById('sv-S' + key);
+    if (node) {
+      const r = node.querySelector('rect');
+      r.setAttribute('fill', 'rgba(16,185,129,0.15)');
+      r.setAttribute('stroke', '#10b981');
+      r.setAttribute('stroke-width', '1.5');
+      const texts = node.querySelectorAll('text');
+      texts[0].setAttribute('fill', '#10b981');
+    }
+  }
+
+  function updatePriceTicks() {
+    document.getElementById('price-label').textContent = PRICE + '¢';
+    document.getElementById('price-mid').textContent = Math.round(PRICE / 2) + '¢';
+  }
+
+  function updateUI() {
+    const pct = Math.min((total / PRICE) * 100, 100);
+    const fill = document.getElementById('prog-fill');
+    fill.style.width = pct + '%';
+    fill.className = 'progress-fill' + (total > PRICE ? ' over' : '');
+    document.getElementById('amount-display').textContent = total + '¢ / ' + PRICE + '¢';
+
+    const sn = total === 0 ? 'S0' : 'S' + snapState(total);
+    document.getElementById('state-badge').textContent = total >= PRICE ? 'DISPENSED' : sn;
+
+    // amount binary
+    document.getElementById('amt-val').textContent = toBinary(total, 6);
+
+    highlightFsmNode(total);
+  }
+
+  function setSignals(disp, chng, refOut) {
+    const sd = document.getElementById('sig-dispense');
+    const sc = document.getElementById('sig-change');
+    const sr = document.getElementById('sig-refund');
+    document.getElementById('disp-val').textContent = disp ? '1' : '0';
+    document.getElementById('chng-val').textContent = chng + '¢';
+    document.getElementById('ref-val').textContent  = refOut ? '1' : '0';
+    sd.className = 'signal' + (disp ? ' on-green' : '');
+    sc.className = 'signal' + (chng > 0 ? ' on-amber' : '');
+    sr.className = 'signal' + (refOut ? ' on-blue' : '');
+  }
+
+  function addLog(msg, cls) {
+    tick++;
+    const log = document.getElementById('log');
+    const d = document.createElement('div');
+    d.className = 'log-line' + (cls ? ' ' + cls : '');
+    d.innerHTML = '<span class="ts">t=' + String(tick).padStart(3, '0') + '</span>' + msg;
+    log.prepend(d);
+  }
+
+  function flashCoin(btnId) {
+    const btn = document.getElementById(btnId);
+    btn.classList.add('clicked');
+    setTimeout(() => btn.classList.remove('clicked'), 300);
+  }
+
+  function setPrice() {
+    const v = parseInt(document.getElementById('price-input').value);
+    if (isNaN(v) || v < 5 || v > 95 || v % 5 !== 0) {
+      toast('Price must be 5–95¢ in multiples of 5');
+      return;
+    }
+    PRICE = v;
+    total = 0;
+    busy = false;
+    setSignals(false, 0, false);
+    document.getElementById('enc-badge').textContent = "coin = 2'b00";
+    updatePriceTicks();
+    updateUI();
+    addLog('PRICE set to ' + PRICE + '¢ — machine reset', 'rst');
+  }
+
+  function insertCoin(val, enc) {
+    if (busy) { addLog('Busy — awaiting reset'); return; }
+    const btnMap = { 5: 'cb5', 10: 'cb10', 25: 'cb25' };
+    flashCoin(btnMap[val]);
+
+    document.getElementById('enc-badge').textContent = "coin = 2'b" + enc;
+    const prev = total;
+    total += val;
+    const names = { 5: 'nickel', 10: 'dime', 25: 'quarter' };
+    addLog('Insert ' + names[val] + ' (+' + val + '¢) → total = ' + total + '¢');
+
+    if (total >= PRICE) {
+      const chng = total - PRICE;
+      busy = true;
+      setSignals(true, chng, false);
+      addLog('dispense = 1' + (chng > 0 ? ' | change = ' + chng + '¢' : ''), chng > 0 ? 'chg' : 'ok');
+      updateUI();
+      setTimeout(() => {
+        total = 0;
+        busy = false;
+        setSignals(false, 0, false);
+        document.getElementById('enc-badge').textContent = "coin = 2'b00";
+        updateUI();
+        addLog('→ state reset to S0');
+      }, 2000);
+    } else {
+      setSignals(false, 0, false);
+      updateUI();
+    }
+  }
+
+  function refund() {
+    if (total === 0) { addLog('Nothing to refund'); return; }
+    const amt = total;
+    setSignals(false, amt, true);
+    document.getElementById('sig-refund').className = 'signal on-blue';
+    addLog('Refund: returning ' + amt + '¢', 'ref');
+    total = 0;
+    document.getElementById('enc-badge').textContent = "coin = 2'b00";
+    busy = false;
+    updateUI();
+    setTimeout(() => {
+      setSignals(false, 0, false);
+      document.getElementById('chng-val').textContent = '0¢';
+    }, 1500);
+  }
+
+  function doReset() {
+    total = 0;
+    busy = false;
+    setSignals(false, 0, false);
+    document.getElementById('enc-badge').textContent = "coin = 2'b00";
+    addLog('posedge reset → S0', 'rst');
+    updateUI();
+  }
+
+  function clearLog() { document.getElementById('log').innerHTML = ''; tick = 0; }
+
+  function copyCode(id) {
+    const el = document.getElementById(id);
+    const text = el.innerText;
+    navigator.clipboard.writeText(text).then(() => toast('Copied to clipboard'));
+  }
+
+  let toastTimer;
+  function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  // Init
+  updatePriceTicks();
+  updateUI();
+  addLog('Machine online — PRICE = ' + PRICE + '¢, state S0');
+</script>
+
+</body>
+</html>
